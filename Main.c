@@ -31,10 +31,10 @@
 //volatile char UART_Buffer[10];
 
 
-#define PSI_SETPOINT 0x41988 //500PSI passed through conversion formula to get target ADC Value
-#define SPIKE_CUTOUT 0x1A36A //If difference between two values is greater than 100PSI it was a spike
-
 char primed;
+
+//volatile FSFILE * tankfile;
+    char fifo_data[4];
 int main() {
     OSCinit();
     UARTinit();
@@ -42,7 +42,9 @@ int main() {
     IOinit();
     AD7193_Init();
     initFiles();
+    FIFOinit();
     OpenTimer1(T1_ON, 0x9C40); // for conversions
+    ConfigIntTimer1(T1_INT_ON);           // 45 seconds
     //mV/V for 3kpsi PT is 6 at a gain of 128.
 
     while(1){
@@ -51,24 +53,41 @@ int main() {
             ProcessUART();
             ClearUART();
         }
-        if (IFS0bits.T1IF)
-        {
-            T1_Clear_Intr_Status_Bit;
-            if (record_data_flag)
-            {
-                recordData();
-            }
-            else
-            {
-                while(PORTBbits.RB3);
-                unsigned long result = AD7193_ReadReg(AD7193_DATA_REG, 4);// - (DC_OFFSET << 8) - 0x80000000;
-                char data2[4] = {(char) ((result & 0xFF000000) >> 24),(char) ((result & 0x00FF0000) >> 16),(char) ((result & 0x0000FF00) >> 8), (char) result & 0x000000FF};
-                if (data2[3] == 0x01)
-                    copyBuffer(data2, NTank, 3);
-                else if (data2[3] == 0x02)
-                    copyBuffer(data2, NitroTank, 3);
-            }
-        }
+//        if (adc_fifo->head != adc_fifo->tail)
+//        {
+//            if (fifo_read(adc_fifo, fifo_data, 4) == 4)
+//                if (record_data_flag)
+//                    putsUART1((UINT*)"write success");
+//            if (record_data_flag)
+//            {
+//                FSfwrite(fifo_data, 1, 4, tankfile);
+//            }
+//            else
+//            {
+//                if (fifo_data[3] == 0x01)
+//                    copyBuffer(fifo_data, NTank, 3);
+//                else if (fifo_data[3] == 0x02)
+//                    copyBuffer(fifo_data, NitroTank, 3);
+//            }
+//        }
+//        if (IFS0bits.T1IF)
+//        {
+//            T1_Clear_Intr_Status_Bit;
+//            if (record_data_flag)
+//            {
+//                recordData();
+//            }
+//            else
+//            {
+//                while(PORTBbits.RB3);
+//                unsigned long result = AD7193_ReadReg(AD7193_DATA_REG, 4);// - (DC_OFFSET << 8) - 0x80000000;
+//                char data2[4] = {(char) ((result & 0xFF000000) >> 24),(char) ((result & 0x00FF0000) >> 16),(char) ((result & 0x0000FF00) >> 8), (char) result & 0x000000FF};
+//                if (data2[3] == 0x01)
+//                    copyBuffer(data2, NTank, 3);
+//                else if (data2[3] == 0x02)
+//                    copyBuffer(data2, NitroTank, 3);
+//            }
+//        }
     }
     return 0;
 }

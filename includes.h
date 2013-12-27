@@ -14,12 +14,12 @@
 #include <uart.h>
 #include <spi.h>
 #include "SysInit.h"
-#include "PeriphFunctions.h"
 #include "FSIO.h"
 #include "AD7193.h"
 #include <Rtcc.h>
 #include <timer.h>
 #include "processing.h"
+#include "PeriphFunctions.h"
 
 #endif	/* INCLUDES_H */
 

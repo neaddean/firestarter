@@ -87,9 +87,9 @@ void ProcessUART(void) {
     } else if (UART_Buffer[0] == 'o')
     {
         if(initFiles())
-            putsUART1("filesystem initilzed successfuly\n");
+            putsUART1((UINT*)"filesystem initilzed successfuly\n");
         else
-            putsUART1("failed to initialize filesystem\n");
+            putsUART1((UINT*)"failed to initialize filesystem\n");
     }
     else if (UART_Buffer[0] == 'c')
     {
@@ -98,9 +98,9 @@ void ProcessUART(void) {
     else if (UART_Buffer[0] == 'd')
     {
         if(!MDD_MediaDetect())
-            putsUART1("Card detected\n");
+            putsUART1((UINT*)"Card detected\n");
         else
-            putsUART1("Card not detected\n");
+            putsUART1((UINT*)"Card not detected\n");
     }else if (UART_Buffer[0] == 'f')
     {
         if (UART_Buffer[1] == '0')
