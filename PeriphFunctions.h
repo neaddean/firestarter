@@ -27,6 +27,7 @@ extern volatile char TX_Buff[3];
 extern volatile long ZERO_OFFSET;
 extern volatile char CTS;
 extern volatile char data_request;
+extern volatile char close_file_flag;
 
 extern volatile char record_data_flag;
 extern volatile char ematches_armed;
@@ -55,20 +56,18 @@ void AD7193_toBuffer4(char* data);
 void pyroValveCountdown(void);
 void startRecording(void);
 
-
+void processData(void);
 void copyBuffer(char* src, char* dest, int bytes);
 
 extern volatile char NTank[3];
 extern volatile char NitroTank[3];
 
-typedef struct{
-     char * buf;
+typedef volatile struct{
      int head;
      int tail;
      int size;
+     char * buf;
 }fifo_t;
-
-extern volatile FSFILE * tankfile;
 
 void FIFOinit(void);
 void fifo_init(fifo_t * f, char * buf, int size);

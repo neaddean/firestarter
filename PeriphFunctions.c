@@ -17,9 +17,9 @@ volatile char record_data_flag = 0;
 
 volatile FSFILE * tankfile;
 
-static fifo_t * adc_fifo;
+volatile fifo_t * adc_fifo;
+volatile char adcFIFObuf[256] = {0};
 
-volatile char adcFIFObuf[256];
 
 /************************************************
  * UART FUNCTIONS
@@ -262,14 +262,15 @@ void copyBuffer(char* src, char* dest, int bytes)
         dest[i] = src[i];
 }
 
-void __attribute__ ((interrupt,no_auto_psv)) _T1Interrupt (void)
+void __attribute__ ((interrupt,auto_psv)) _T1Interrupt (void)
 {
     T1_Clear_Intr_Status_Bit;
     while(PORTBbits.RB3);
     unsigned long result = AD7193_ReadReg(AD7193_DATA_REG, 4)-(DC_OFFSET << 8);
   //  char data2[4] = {(char) ((result & 0xFF000000) >> 24),(char) ((result & 0x00FF0000) >> 16),(char) ((result & 0x0000FF00) >> 8), (char) result & 0x000000FF};
-    if (fifo_write(adc_fifo, &result, 4) != 4)
-            putsUART1((UINT*)"ERROR #2");
+////    if (fifo_write(&adc_fifo, &data2, 4) != 4)
+////            putsUART1((UINT*)"ERROR #2");
+    fifo_write(adc_fifo, &result, 4);
 }
 
 void __attribute__ ((interrupt,no_auto_psv)) _T23Interrupt (void)
@@ -277,7 +278,7 @@ void __attribute__ ((interrupt,no_auto_psv)) _T23Interrupt (void)
    T23_Clear_Intr_Status_Bit;
    CloseTimer23();
    CloseTimer1();
-   closeFiles();
+   close_file_flag = 1;
    record_data_flag = 0;
 }
 
@@ -304,7 +305,9 @@ void fifo_init(fifo_t * f, char * buf, int size){
 
 void FIFOinit()
 {
-    fifo_init(adc_fifo, adcFIFObuf, 255);
+ //   volatile char * adcFIFObuf = malloc(256*sizeof(char));
+   // volatile char adcFIFObuf[256] = {0};
+    fifo_init(&adc_fifo, adcFIFObuf, 255);
 }
 
 //This reads nbytes bytes from the FIFO
@@ -348,4 +351,27 @@ int fifo_write(fifo_t * f, const void * buf, int nbytes){
            }
      }
      return nbytes;
+}
+
+void processData()
+{
+        char fifo_data[4];
+     if (adc_fifo->head != adc_fifo->tail)
+        {
+//            if (fifo_read(&adc_fifo, &fifo_data, 4) == 4)
+//                if (record_data_flag)
+//                    putsUART1((UINT*)"write success\n");
+            fifo_read(adc_fifo, &fifo_data, 4);
+            if (record_data_flag)
+            {
+                FSfwrite(fifo_data, 1, 4, tankfile);
+            }
+            else
+            {
+                if (fifo_data[3] == 0x01)
+                    copyBuffer(fifo_data, NTank, 3);
+                else if (fifo_data[3] == 0x02)
+                    copyBuffer(fifo_data, NitroTank, 3);
+            }
+        }
 }
