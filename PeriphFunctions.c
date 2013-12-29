@@ -17,8 +17,11 @@ volatile char record_data_flag = 0;
 
 volatile FSFILE * tankfile;
 
-volatile fifo_t * adc_fifo;
-volatile char adcFIFObuf[256] = {0};
+volatile char fifo_buf[256];
+volatile int head = 0;
+volatile int tail = 0;
+volatile char fifo_lock = 0;
+#define fifo_size 256
 
 
 /************************************************
@@ -270,7 +273,7 @@ void __attribute__ ((interrupt,auto_psv)) _T1Interrupt (void)
   //  char data2[4] = {(char) ((result & 0xFF000000) >> 24),(char) ((result & 0x00FF0000) >> 16),(char) ((result & 0x0000FF00) >> 8), (char) result & 0x000000FF};
 ////    if (fifo_write(&adc_fifo, &data2, 4) != 4)
 ////            putsUART1((UINT*)"ERROR #2");
-    fifo_write(adc_fifo, &result, 4);
+    fifo_write(&result, 4);
 }
 
 void __attribute__ ((interrupt,no_auto_psv)) _T23Interrupt (void)
@@ -295,33 +298,18 @@ void __attribute__ ((interrupt,no_auto_psv)) _T45Interrupt (void)
    fireEmatch(2);
 }
 
-//This initializes the FIFO structure with the given buffer and size
-void fifo_init(fifo_t * f, char * buf, int size){
-     f->head = 0;
-     f->tail = 0;
-     f->size = size;
-     f->buf = buf;
-}
-
-void FIFOinit()
-{
- //   volatile char * adcFIFObuf = malloc(256*sizeof(char));
-   // volatile char adcFIFObuf[256] = {0};
-    fifo_init(&adc_fifo, adcFIFObuf, 255);
-}
-
 //This reads nbytes bytes from the FIFO
 //The number of bytes read is returned
-int fifo_read(fifo_t * f, void * buf, int nbytes){
+int fifo_read(void * buf, int nbytes){
      int i;
      char * p;
      p = buf;
      for(i=0; i < nbytes; i++){
-          if( f->tail != f->head ){ //see if any data is available
-               *p++ = f->buf[f->tail];  //grab a byte from the buffer
-               f->tail++;  //increment the tail
-               if( f->tail == f->size ){  //check for wrap-around
-                    f->tail = 0;
+          if( tail != head ){ //see if any data is available
+               *p++ = fifo_buf[tail];  //grab a byte from the buffer
+               tail++;  //increment the tail
+               if( tail == fifo_size ){  //check for wrap-around
+                    tail = 0;
                }
           } else {
                return i; //number of bytes read
@@ -333,35 +321,37 @@ int fifo_read(fifo_t * f, void * buf, int nbytes){
 //This writes up to nbytes bytes to the FIFO
 //If the head runs in to the tail, not all bytes are written
 //The number of bytes written is returned
-int fifo_write(fifo_t * f, const void * buf, int nbytes){
+int fifo_write(const void * buf, int nbytes){
+    fifo_lock = 1;
      int i;
      const char * p;
      p = buf;
      for(i=0; i < nbytes; i++){
            //first check to see if there is space in the buffer
-           if( (f->head + 1 == f->tail) ||
-                ( (f->head + 1 == f->size) && (f->tail == 0) )){
+           if( (head + 1 == tail) ||
+                ( (head + 1 == fifo_size) && (tail == 0) )){
                  return i; //no more room
            } else {
-               f->buf[f->head] = *p++;
-               f->head++;  //increment the head
-               if( f->head == f->size ){  //check for wrap-around
-                    f->head = 0;
+               fifo_buf[head] = *p++;
+               head++;  //increment the head
+               if( head == fifo_size ){  //check for wrap-around
+                    head = 0;
                }
            }
      }
+     fifo_lock = 0;
      return nbytes;
 }
 
 void processData()
 {
         char fifo_data[4];
-     if (adc_fifo->head != adc_fifo->tail)
+     if (head != tail && !fifo_lock)
         {
 //            if (fifo_read(&adc_fifo, &fifo_data, 4) == 4)
 //                if (record_data_flag)
 //                    putsUART1((UINT*)"write success\n");
-            fifo_read(adc_fifo, &fifo_data, 4);
+            fifo_read(&fifo_data, 4);
             if (record_data_flag)
             {
                 FSfwrite(fifo_data, 1, 4, tankfile);
@@ -373,5 +363,6 @@ void processData()
                 else if (fifo_data[3] == 0x02)
                     copyBuffer(fifo_data, NitroTank, 3);
             }
+
         }
 }
