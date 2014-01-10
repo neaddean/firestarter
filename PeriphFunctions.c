@@ -12,13 +12,17 @@ volatile char CTS = 0;
 
 volatile char NTank[3];
 volatile char NitroTank[3];
+volatile char fifo_data[4];
 
 volatile char record_data_flag = 0;
 
 volatile FSFILE * tankfile;
 
-volatile fifo_t * adc_fifo;
-volatile char adcFIFObuf[256] = {0};
+#define fifo_size 256
+volatile char fifo_buf[256];
+volatile int head = 0;
+volatile int tail = 0;
+
 
 
 /************************************************
@@ -159,7 +163,7 @@ BOOL initFiles(void)
    // putsUART1("attempting to open fs\n");
     if (!FSInit())
     {
-       putsUART1((UINT*)"FAILED");
+       putsUART1((UINT*)"FAILED TO FSINIT\n");
        return FALSE;
     }
 
@@ -167,10 +171,11 @@ BOOL initFiles(void)
 
     if (tankfile == NULL)
     {
+        putsUART1((UINT*)"FAILED TO OPEN FILE");
         return FALSE;
     }
 
-  //  putsUART1("FS initialized corectly!\n");
+    putsUART1("FS initialized corectly!\n");
     return TRUE;
 }
 
@@ -201,9 +206,9 @@ void fireEmatch(int eMatch)
 
 	 __delay32(1000);
 
-	 LATBbits.LATB13 = 0;
-	 LATBbits.LATB12 = 0;
-         LATBbits.LATB9  = 0;
+//	 LATBbits.LATB13 = 0;
+//	 LATBbits.LATB12 = 0;
+//         LATBbits.LATB9  = 0;
 }
 
 void senseEmatch(int eMatch)
@@ -239,19 +244,12 @@ void senseEmatch(int eMatch)
     PORTAbits.RA3 = 0;
 }
 
-void recordData(void)
-{
-    while(PORTBbits.RB3);
-  //  unsigned long result = AD7193_ReadReg(AD7193_DATA_REG, 4)-(DC_OFFSET << 8);
-//    char data2[4] = {(char) ((result & 0xFF000000) >> 24),(char) ((result & 0x00FF0000) >> 16),(char) ((result & 0x0000FF00) >> 8), (char) result & 0x000000FF};
-//    fifo_write(adc_fifo, result, 4);
-}
-
 void startRecording()
 {
     record_data_flag = 1;
 //    OpenTimer23(T23_ON | T23_PS_1_256, 0x002AEA54); //to stop the conversions!
     OpenTimer23(T23_ON | T23_PS_1_64, 0x002AEA54);
+//    OpenTimer23(T23_ON, 0x0001FFFF);
     ConfigIntTimer23(T23_INT_ON | T23_INT_PRIOR_6);
 }
 
@@ -266,11 +264,9 @@ void __attribute__ ((interrupt,auto_psv)) _T1Interrupt (void)
 {
     T1_Clear_Intr_Status_Bit;
     while(PORTBbits.RB3);
-    unsigned long result = AD7193_ReadReg(AD7193_DATA_REG, 4)-(DC_OFFSET << 8);
-  //  char data2[4] = {(char) ((result & 0xFF000000) >> 24),(char) ((result & 0x00FF0000) >> 16),(char) ((result & 0x0000FF00) >> 8), (char) result & 0x000000FF};
-////    if (fifo_write(&adc_fifo, &data2, 4) != 4)
-////            putsUART1((UINT*)"ERROR #2");
-    fifo_write(adc_fifo, &result, 4);
+    unsigned long result = AD7193_ReadReg(AD7193_DATA_REG, 4);// - (DC_OFFSET << 8);
+    char data2[4] = {(char) ((result & 0xFF000000) >> 24),(char) ((result & 0x00FF0000) >> 16),(char) ((result & 0x0000FF00) >> 8), (char) result & 0x000000FF};
+    fifo_write(data2, 4);
 }
 
 void __attribute__ ((interrupt,no_auto_psv)) _T23Interrupt (void)
@@ -284,44 +280,30 @@ void __attribute__ ((interrupt,no_auto_psv)) _T23Interrupt (void)
 
 void pyroValveCountdown()
 {
-    OpenTimer45(T45_ON | T45_PS_1_256, 0x0004C4B4);
-    ConfigIntTimer4(T45_INT_ON | T45_INT_PRIOR_6);
+//    OpenTimer4(T4_ON | T4_PS_1_256, 0x0004C4B4);
+    OpenTimer23(T23_ON | T23_PS_1_64, 0x002AEA54);
+    ConfigIntTimer45(T45_INT_ON | T45_INT_PRIOR_6);
 }
 
 void __attribute__ ((interrupt,no_auto_psv)) _T45Interrupt (void)
 {
    T45_Clear_Intr_Status_Bit;
    CloseTimer45();
-   fireEmatch(2);
-}
-
-//This initializes the FIFO structure with the given buffer and size
-void fifo_init(fifo_t * f, char * buf, int size){
-     f->head = 0;
-     f->tail = 0;
-     f->size = size;
-     f->buf = buf;
-}
-
-void FIFOinit()
-{
- //   volatile char * adcFIFObuf = malloc(256*sizeof(char));
-   // volatile char adcFIFObuf[256] = {0};
-    fifo_init(&adc_fifo, adcFIFObuf, 255);
+   fireEmatch(1);
 }
 
 //This reads nbytes bytes from the FIFO
 //The number of bytes read is returned
-int fifo_read(fifo_t * f, void * buf, int nbytes){
+int fifo_read(void * buf, int nbytes){
      int i;
      char * p;
      p = buf;
      for(i=0; i < nbytes; i++){
-          if( f->tail != f->head ){ //see if any data is available
-               *p++ = f->buf[f->tail];  //grab a byte from the buffer
-               f->tail++;  //increment the tail
-               if( f->tail == f->size ){  //check for wrap-around
-                    f->tail = 0;
+          if( tail != head ){ //see if any data is available
+               *p++ = fifo_buf[tail];  //grab a byte from the buffer
+               tail++;  //increment the tail
+               if( tail == fifo_size ){  //check for wrap-around
+                    tail = 0;
                }
           } else {
                return i; //number of bytes read
@@ -333,20 +315,20 @@ int fifo_read(fifo_t * f, void * buf, int nbytes){
 //This writes up to nbytes bytes to the FIFO
 //If the head runs in to the tail, not all bytes are written
 //The number of bytes written is returned
-int fifo_write(fifo_t * f, const void * buf, int nbytes){
+int fifo_write(const void * buf, int nbytes){
      int i;
      const char * p;
      p = buf;
      for(i=0; i < nbytes; i++){
            //first check to see if there is space in the buffer
-           if( (f->head + 1 == f->tail) ||
-                ( (f->head + 1 == f->size) && (f->tail == 0) )){
+           if( (head + 1 == tail) ||
+                ( (head + 1 == fifo_size) && (tail == 0) )){
                  return i; //no more room
            } else {
-               f->buf[f->head] = *p++;
-               f->head++;  //increment the head
-               if( f->head == f->size ){  //check for wrap-around
-                    f->head = 0;
+               fifo_buf[head] = *p++;
+               head++;  //increment the head
+               if( head == fifo_size ){  //check for wrap-around
+                    head = 0;
                }
            }
      }
@@ -355,23 +337,18 @@ int fifo_write(fifo_t * f, const void * buf, int nbytes){
 
 void processData()
 {
-        char fifo_data[4];
-     if (adc_fifo->head != adc_fifo->tail)
+     if (fifo_read(fifo_data, 4) == 4)
+     {
+        if (record_data_flag)
         {
-//            if (fifo_read(&adc_fifo, &fifo_data, 4) == 4)
-//                if (record_data_flag)
-//                    putsUART1((UINT*)"write success\n");
-            fifo_read(adc_fifo, &fifo_data, 4);
-            if (record_data_flag)
-            {
-                FSfwrite(fifo_data, 1, 4, tankfile);
-            }
-            else
-            {
-                if (fifo_data[3] == 0x01)
-                    copyBuffer(fifo_data, NTank, 3);
-                else if (fifo_data[3] == 0x02)
-                    copyBuffer(fifo_data, NitroTank, 3);
-            }
+            FSfwrite(fifo_data, 1, 4, tankfile);
         }
+        else
+        {
+            if (fifo_data[3] == 0x01)
+                copyBuffer(fifo_data, NTank, 3);
+            else if (fifo_data[3] == 0x02)
+                copyBuffer(fifo_data, NitroTank, 3);
+        }
+     }
 }

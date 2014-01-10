@@ -54,6 +54,7 @@
 #define CONFIG_REFSEL_2         1l<<20
 #define CONFIG_PSUEDO           1l<<18
 #define CONFIG_CHANNEL_SEL(x)   ((1<<x)<<8)
+#define CONFIG_TEMP             0x010000
 #define CONFIG_BURN             1l<<7
 #define CONFIG_REFDET           1l<<6
 #define CONFIG_BUF              1l<<4

@@ -45,8 +45,6 @@ void senseEmatch(int);
 BOOL initFiles(void);
 void closeFiles(void);
 
-void recordData(void);
-
 void SPIinit(void);
 void SPI_Read(unsigned char * data, unsigned char bytesNumber);
 void SPI_Write(unsigned char* data, unsigned char bytesNumber);
@@ -62,17 +60,8 @@ void copyBuffer(char* src, char* dest, int bytes);
 extern volatile char NTank[3];
 extern volatile char NitroTank[3];
 
-typedef volatile struct{
-     int head;
-     int tail;
-     int size;
-     char * buf;
-}fifo_t;
-
-void FIFOinit(void);
-void fifo_init(fifo_t * f, char * buf, int size);
-int fifo_read(fifo_t * f, void * buf, int nbytes);
-int fifo_write(fifo_t * f, const void * buf, int nbytes);
+int fifo_read(void * buf, int nbytes);
+int fifo_write(const void * buf, int nbytes);
 
 
 #endif	/* PERIPHINIT_H */

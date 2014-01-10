@@ -43,8 +43,8 @@ int main() {
     IOinit();
     AD7193_Init();
     initFiles();
-    FIFOinit();
-    OpenTimer1(T1_ON, 0x9C40); // for conversions
+//    OpenTimer1(T1_ON, 0x9C40); // for conversions
+    OpenTimer1(T1_ON, 0x3E80);
     ConfigIntTimer1(T1_INT_ON | T1_INT_PRIOR_3);
     //mV/V for 3kpsi PT is 6 at a gain of 128.
 

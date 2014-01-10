@@ -133,8 +133,10 @@ void ProcessUART(void) {
      else if (UART_Buffer[0] == 'q')
      {
          if (UART_Buffer[1] == 's')
-         {
              startRecording();
+         else if (UART_Buffer[1] == 'd')
+         {
+             pyroValve();
          }
      }
 

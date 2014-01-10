@@ -18,8 +18,9 @@
 #include "AD7193.h"
 #include <Rtcc.h>
 #include <timer.h>
-#include "processing.h"
 #include "PeriphFunctions.h"
+#include "processing.h"
+
 
 #endif	/* INCLUDES_H */
 
