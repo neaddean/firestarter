@@ -23,8 +23,6 @@ volatile char fifo_buf[256];
 volatile int head = 0;
 volatile int tail = 0;
 
-
-
 /************************************************
  * UART FUNCTIONS
  ***********************************************/
