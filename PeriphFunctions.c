@@ -53,7 +53,7 @@ void IOinit(void)
     LATB = 0x0000;
 }
 
-void _ISR _U1RXInterrupt(void) {
+void __attribute__ ((interrupt,no_auto_psv)) _U1RXInterrupt(void) {
     U1RX_Clear_Intr_Status_Bit;
     
     if (U1STAbits.OERR) {
@@ -165,15 +165,7 @@ BOOL initFiles(void)
        return FALSE;
     }
 
-    tankfile = FSfopen("t.txt", "w");
-
-    if (tankfile == NULL)
-    {
-        putsUART1((UINT*)"FAILED TO OPEN FILE");
-        return FALSE;
-    }
-
-    putsUART1("FS initialized corectly!\n");
+    putsUART1((UINT*)"FS initialized corectly!\n");
     return TRUE;
 }
 
@@ -202,11 +194,12 @@ void fireEmatch(int eMatch)
                  break;
 	}
 
-	 __delay32(1000);
+         int count;
+         for(count = 0; count < 1000; count++);
 
-//	 LATBbits.LATB13 = 0;
-//	 LATBbits.LATB12 = 0;
-//         LATBbits.LATB9  = 0;
+	 LATBbits.LATB13 = 0;
+	 LATBbits.LATB12 = 0;
+         LATBbits.LATB9  = 0;
 }
 
 void senseEmatch(int eMatch)
@@ -221,7 +214,8 @@ void senseEmatch(int eMatch)
             break;
     }
 
-    __delay32(1000);
+    int count;
+    for(count = 0; count < 750; count++);
 
     if (eMatch == 1)
     {
@@ -244,9 +238,18 @@ void senseEmatch(int eMatch)
 
 void startRecording()
 {
+
+    tankfile = FSfopen("t.txt", "w");
+
+    if (tankfile == NULL)
+    {
+        putsUART1((UINT*)"FAILED TO OPEN FILE\n");
+        return FALSE;
+    }
+
     record_data_flag = 1;
-//    OpenTimer23(T23_ON | T23_PS_1_256, 0x002AEA54); //to stop the conversions!
-    OpenTimer23(T23_ON | T23_PS_1_64, 0x002AEA54);
+    OpenTimer23(T23_ON | T23_PS_1_256, 0x002AEA54); //to stop the conversions!
+//    OpenTimer23(T23_ON | T23_PS_1_64, 0x002625A0);
 //    OpenTimer23(T23_ON, 0x0001FFFF);
     ConfigIntTimer23(T23_INT_ON | T23_INT_PRIOR_6);
 }
@@ -276,18 +279,20 @@ void __attribute__ ((interrupt,no_auto_psv)) _T23Interrupt (void)
    record_data_flag = 0;
 }
 
-void pyroValveCountdown()
+void pyroValve()
 {
-//    OpenTimer4(T4_ON | T4_PS_1_256, 0x0004C4B4);
-    OpenTimer23(T23_ON | T23_PS_1_64, 0x002AEA54);
-    ConfigIntTimer45(T45_INT_ON | T45_INT_PRIOR_6);
+    T4CON = 0xC038;
+    PR4 = 0xC4B4;
+    PR5 = 0x0004;
+    IEC1bits.T5IE = 1;
+    IPC7bits.T5IP = 1;
 }
 
-void __attribute__ ((interrupt,no_auto_psv)) _T45Interrupt (void)
+void __attribute__ ((interrupt,no_auto_psv)) _T5Interrupt (void)
 {
-   T45_Clear_Intr_Status_Bit;
-   CloseTimer45();
-   fireEmatch(1);
+   T5_Clear_Intr_Status_Bit;
+   CloseTimer4();
+   fireEmatch(2);
 }
 
 //This reads nbytes bytes from the FIFO

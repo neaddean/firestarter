@@ -136,8 +136,17 @@ void ProcessUART(void) {
              startRecording();
          else if (UART_Buffer[1] == 'd')
          {
+             fireEmatch(1);
              pyroValve();
          }
+         else if (UART_Buffer[1] == 'r')
+             record_data_flag = 1;
+         else if (UART_Buffer[1] == 't')
+         {
+             record_data_flag = 0;
+             close_file_flag = 1;
+         }
+
      }
 
 }

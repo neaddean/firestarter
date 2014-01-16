@@ -51,7 +51,7 @@ void SPI_Write(unsigned char* data, unsigned char bytesNumber);
 
 void AD7193_toBuffer4(char* data);
 
-void pyroValveCountdown(void);
+void pyroValve(void);
 void startRecording(void);
 
 void processData(void);
