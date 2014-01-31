@@ -10,9 +10,10 @@ volatile char TX_Buff[3];
 volatile long ZERO_OFFSET=0;
 volatile char CTS = 0;
 
-volatile char NTank[3];
-volatile char NitroTank[3];
+volatile char Pressurant[3];
+volatile char Oxidizer[3];
 volatile char fifo_data[4];
+volatile char senddata[4];
 
 volatile char record_data_flag = 0;
 
@@ -161,19 +162,26 @@ BOOL initFiles(void)
    // putsUART1("attempting to open fs\n");
     if (!FSInit())
     {
+#ifdef DEBUG
        putsUART1((UINT*)"FAILED TO FSINIT\n");
+#endif
        return FALSE;
     }
-
+#ifdef DEBUG
     putsUART1((UINT*)"FS initialized corectly!\n");
+#endif
     return TRUE;
 }
 
 void closeFiles(void)
 {
+#ifdef DEBUG
     if (FSfclose(tankfile))
         putsUART1((UINT*) "\nERROR: Close tank1.txt failed.\n");
     putsUART1((UINT*)"File closed!\n");
+#else
+    FSfclose(tankfile);
+#endif
 }
 
 
@@ -243,13 +251,16 @@ void startRecording()
 
     if (tankfile == NULL)
     {
+#ifdef DEBUG
         putsUART1((UINT*)"FAILED TO OPEN FILE\n");
+#endif
         return FALSE;
     }
 
     record_data_flag = 1;
-    OpenTimer23(T23_ON | T23_PS_1_256, 0x002AEA54); //to stop the conversions!
-//    OpenTimer23(T23_ON | T23_PS_1_64, 0x002625A0);
+    OpenTimer23(T23_ON | T23_PS_1_256, 0x002AEA54); // 45s
+//    OpenTimer23(T23_ON | T23_PS_1_256, 0x00393870); // 60s
+//    OpenTimer23(T23_ON | T23_PS_1_64, 0x002625A0); //  ~10s
 //    OpenTimer23(T23_ON, 0x0001FFFF);
     ConfigIntTimer23(T23_INT_ON | T23_INT_PRIOR_6);
 }
@@ -265,9 +276,13 @@ void __attribute__ ((interrupt,auto_psv)) _T1Interrupt (void)
 {
     T1_Clear_Intr_Status_Bit;
     while(PORTBbits.RB3);
-    unsigned long result = AD7193_ReadReg(AD7193_DATA_REG, 4);// - (DC_OFFSET << 8);
+    unsigned long result = AD7193_ReadReg(AD7193_DATA_REG, 4);
     char data2[4] = {(char) ((result & 0xFF000000) >> 24),(char) ((result & 0x00FF0000) >> 16),(char) ((result & 0x0000FF00) >> 8), (char) result & 0x000000FF};
     fifo_write(data2, 4);
+     if (data2[3] == 0x00)
+        copyBuffer(data2, Pressurant, 3);
+     else if (data2[3] == 0x02)
+        copyBuffer(data2, Oxidizer, 3);
 }
 
 void __attribute__ ((interrupt,no_auto_psv)) _T23Interrupt (void)
@@ -348,10 +363,36 @@ void processData()
         }
         else
         {
-            if (fifo_data[3] == 0x01)
-                copyBuffer(fifo_data, NTank, 3);
+            if (fifo_data[3] == 0x00)
+                copyBuffer(fifo_data, Pressurant, 3);
             else if (fifo_data[3] == 0x02)
-                copyBuffer(fifo_data, NitroTank, 3);
+                copyBuffer(fifo_data, Oxidizer, 3);
         }
      }
+}
+
+void readCard()
+{
+//    DisableIntT1;
+//
+//    tankfile = FSfopen("t.txt", "r");
+//
+//    if (tankfile == NULL)
+//        putsUART1((UINT*)"ERROR: COULD NOT OPEN FILE FOR READ!!!....\n");
+//
+//    while (1)
+//    {
+//        if (FSfread(senddata, 1, 4, tankfile) != 4)
+//            break;
+//        TX_Register(senddata, 4);
+//    }
+////    char tempdata[1000];
+////    int bytesread = FSfread(tempdata, 4, 250, tankfile);
+////    int i;
+////    for (i = 0; i < 1000; i++)
+////        putcUART1(tempdata[i]);
+//
+//    putsUART1((UINT*)"DONE\n");
+//
+//    FSfclose(tankfile);
 }

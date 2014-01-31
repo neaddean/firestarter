@@ -122,12 +122,12 @@ void ProcessUART(void) {
         if (UART_Buffer[1] == 'D') //pressurant
         {
             putcUART1('P');
-            TX_Register(NTank, 3);
+            TX_Register(Pressurant, 3);
         }
         else if (UART_Buffer[1] == 'F') //oxidixer
         {
             putcUART1('O');
-            TX_Register(NitroTank, 3);
+            TX_Register(Oxidizer, 3);
         }
     }
      else if (UART_Buffer[0] == 'q')
@@ -136,6 +136,10 @@ void ProcessUART(void) {
              startRecording();
          else if (UART_Buffer[1] == 'd')
          {
+#ifndef DEBUG
+             startRecording();
+#endif
+             putsUART1((UINT*)"PA\n");
              fireEmatch(1);
              pyroValve();
          }
@@ -145,6 +149,10 @@ void ProcessUART(void) {
          {
              record_data_flag = 0;
              close_file_flag = 1;
+         }
+         else if (UART_Buffer[1] == 'l')
+         {
+//             readCard();
          }
 
      }

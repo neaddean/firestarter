@@ -44,6 +44,7 @@ void senseEmatch(int);
 
 BOOL initFiles(void);
 void closeFiles(void);
+void readCard(void);
 
 void SPIinit(void);
 void SPI_Read(unsigned char * data, unsigned char bytesNumber);
@@ -57,8 +58,8 @@ void startRecording(void);
 void processData(void);
 void copyBuffer(char* src, char* dest, int bytes);
 
-extern volatile char NTank[3];
-extern volatile char NitroTank[3];
+extern volatile char Pressurant[3];
+extern volatile char Oxidizer[3];
 
 int fifo_read(void * buf, int nbytes);
 int fifo_write(const void * buf, int nbytes);

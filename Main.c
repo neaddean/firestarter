@@ -43,8 +43,8 @@ int main() {
     IOinit();
     AD7193_Init();
     initFiles();
-    OpenTimer1(T1_ON, 0x9C40); // for conversions
-//    OpenTimer1(T1_ON, 0x3E80);
+//    OpenTimer1(T1_ON, 0x9C40); // for conversions
+    OpenTimer1(T1_ON, 0x3E80);
 //    OpenTimer1(T1_ON, 0x29B0);
     ConfigIntTimer1(T1_INT_ON | T1_INT_PRIOR_3);
 //    putsUART1((UINT*)"Started...\n");
