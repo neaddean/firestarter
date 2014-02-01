@@ -8,8 +8,8 @@
 #ifndef PERIPHINIT_H
 #define	PERIPHINIT_H
 
-#define PSI_SETPOINT 0x7CF49 //500PSI passed through conversion formula to get target ADC Value
-#define DC_OFFSET 0x14E6D
+#define PSI_SETPOINT 0x76c69 //500PSI passed through conversion formula to get target ADC Value
+//#define DC_OFFSET 0x14E6D
 
 #define UxBRG_value 16
 extern volatile char UART_Buffer[10];
@@ -32,12 +32,17 @@ extern volatile char close_file_flag;
 extern volatile char record_data_flag;
 extern volatile char ematches_armed;
 
+extern volatile char regulating;
+extern volatile char backfill;
+extern volatile signed char backangle;
+
 void UARTinit(void);
 void ProcessUART(void);
 void ClearUART(void);
 void TX_Register(char * buffer,char bytes);
 
-void  IOinit(void);
+void IOinit(void);
+void PWMinit(void);
 
 void fireEmatch(int);
 void senseEmatch(int);
@@ -58,11 +63,21 @@ void startRecording(void);
 void processData(void);
 void copyBuffer(char* src, char* dest, int bytes);
 
-extern volatile char Pressurant[3];
-extern volatile char Oxidizer[3];
+extern volatile long Pressurant;
+extern volatile long Oxidizer;
 
 int fifo_read(void * buf, int nbytes);
 int fifo_write(const void * buf, int nbytes);
+
+void setAngle(long angle);
+
+#define HT7990_N90 1919
+#define HT7990_N45 2569
+#define HT7990_0 3019
+#define HT7990_45 3569
+#define HT7990_90 4119
+
+#define SERVO_PERIOD 4500
 
 
 #endif	/* PERIPHINIT_H */
