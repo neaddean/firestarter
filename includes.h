@@ -8,7 +8,7 @@
 #ifndef INCLUDES_H
 #define	INCLUDES_H
 
-//#define DEBUG
+#define DEBUG
 #define USE_AND_OR
 #include <xc.h>
 #include <uart.h>

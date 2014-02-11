@@ -27,8 +27,9 @@ volatile int head = 0;
 volatile int tail = 0;
 
 volatile char regulating = 0;
-volatile char backfill = 0;
-volatile signed char backangle = -60;
+volatile int backangle = -60;
+volatile char turnOffServo = 0;
+volatile int TOSPC = 0;
 
 /************************************************
  * UART FUNCTIONS
@@ -199,8 +200,8 @@ void fireEmatch(int eMatch) {
             break;
     }
 
-    int count;
-    for (count = 0; count < 1000; count++);
+    unsigned int count;
+    for (count = 0; count < 50000; count++);
 
     LATBbits.LATB13 = 0;
     LATBbits.LATB12 = 0;
@@ -269,34 +270,36 @@ void copyBuffer(char* src, char* dest, int bytes) {
 
 void __attribute__((interrupt, auto_psv)) _T1Interrupt(void) {
     T1_Clear_Intr_Status_Bit;
-    while (PORTBbits.RB3);
+    //    while (PORTBbits.RB3);
     unsigned long result = AD7193_ReadReg(AD7193_DATA_REG, 4);
     char data2[4] = {(char) ((result & 0xFF000000) >> 24), (char) ((result & 0x00FF0000) >> 16), (char) ((result & 0x0000FF00) >> 8), (char) result & 0x000000FF};
     fifo_write(data2, 4);
-    if (data2[3] == 0x00)
+    if ((result & 0x03) == 0x03)
         //        copyBuffer(data2, Pressurant, 3);
-        Pressurant = result >> 8;
-    else if (data2[3] == 0x02)
-        //        copyBuffer(data2, Oxidizer, 3);
         Oxidizer = result >> 8;
+    else if (result & 0x01 == 0x01)
+        //        copyBuffer(data2, Oxidizer, 3);
+        Pressurant = result >> 8;
     if (regulating) {
         long adc_error = PSI_SETPOINT - (Oxidizer - 0x800000);
         double PSI_error = adc_error * .00019857624192227687;
-        long theta = PSI_error * 2;
+        long theta = PSI_error * 3;
         if (theta < 0) {
             theta = -30;
-        } else if (theta > 90) {
-            theta = 45;
+        } else if (theta > 57) {
+            theta = 57;
         }
-        setAngle(-45 + theta);
+        setAngle(-57 + theta);
     } else if (backfill) {
-        // 860 = 0x44cd2c
-        // 90  = 0x09a248
-        if (Oxidizer > 0x09a248) {
-            backfill = 0;
-            return;
+        long adc_error = PSI_SETPOINT - (Oxidizer - 0x800000);
+        double PSI_error = adc_error * .00019857624192227687;
+        long theta = PSI_error * .5;
+        if (theta < 0) {
+            theta = -30;
+        } else if (theta > 15) {
+            theta = 15;
         }
-        setAngle(backangle);
+        setAngle(-57 + theta);
     } else {
         setAngle(-90);
     }
@@ -305,10 +308,11 @@ void __attribute__((interrupt, auto_psv)) _T1Interrupt(void) {
 void __attribute__((interrupt, no_auto_psv)) _T45Interrupt(void) {
     T45_Clear_Intr_Status_Bit;
     CloseTimer45();
-    CloseTimer1();
     close_file_flag = 1;
     record_data_flag = 0;
-    regulating = 1;
+    regulating = 0;
+    OC3RS = 0;
+    OC3CONbits.OCM = 0;
 }
 
 void pyroValve() {
@@ -318,6 +322,7 @@ void pyroValve() {
     IEC0bits.T3IE = 1;
     IPC2bits.T3IP = 1;
     T3POST = 0;
+    regulating = 1;
 }
 
 void __attribute__((interrupt, no_auto_psv)) _T3Interrupt(void) {
@@ -377,11 +382,6 @@ void processData() {
     if (fifo_read(fifo_data, 4) == 4) {
         if (record_data_flag) {
             FSfwrite(fifo_data, 1, 4, tankfile);
-        } else {
-            if (fifo_data[3] == 0x00)
-                copyBuffer(fifo_data, Pressurant, 3);
-            else if (fifo_data[3] == 0x02)
-                copyBuffer(fifo_data, Oxidizer, 3);
         }
     }
 }
@@ -417,13 +417,13 @@ void PWMinit() {
     T2CONbits.T32 = 0;
     T2CONbits.TCS = 0;
 
-    PR2 = SERVO_PERIOD;
-    OC2R = HT7990_N90;
-    OC2CONbits.OCTSEL = 0;
-    OC2CONbits.OCM = 6;
-    RPOR7 = 0x1300;
+    PR3 = SERVO_PERIOD;
+    OC3R = HT7990_N90;
+    OC3CONbits.OCTSEL = 0;
+    OC3CONbits.OCM = 6;
+    RPOR7 = 0x0014;
 }
 
 void setAngle(long angle) {
-    OC2RS = HT7990_0 + (int) (12.2 * angle); //Set to max 10 degree opening for fill;
+    OC3RS = HT7990_0 + (int) (12.2 * angle); //Set to max 10 degree opening for fill;
 }

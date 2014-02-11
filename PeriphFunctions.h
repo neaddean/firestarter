@@ -8,7 +8,7 @@
 #ifndef PERIPHINIT_H
 #define	PERIPHINIT_H
 
-#define PSI_SETPOINT 0x76c69 //500PSI passed through conversion formula to get target ADC Value
+#define PSI_SETPOINT 0x47e005
 //#define DC_OFFSET 0x14E6D
 
 #define UxBRG_value 16
@@ -34,7 +34,9 @@ extern volatile char ematches_armed;
 
 extern volatile char regulating;
 extern volatile char backfill;
-extern volatile signed char backangle;
+extern volatile int  backangle;
+extern volatile char turnOffServo;
+extern volatile int TOSPC;
 
 void UARTinit(void);
 void ProcessUART(void);

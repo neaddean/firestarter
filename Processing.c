@@ -4,6 +4,8 @@ long data_cmds_received = 0;
 long data_cmds_processed = 0;
 long data_cmds_transmitted = 0;
 
+volatile char backfill = 0;
+
 char MathABS(long one, long two) {
     long temp = one - two;
     if (temp < 0) {
@@ -120,11 +122,25 @@ void ProcessUART(void) {
         if (UART_Buffer[1] == 'D') //pressurant
         {
             putcUART1('P');
-            TX_Register(Pressurant << 8, 3);
+            while(U1STAbits.TRMT);
+            char dataP[3] = {(char) ((Pressurant >> 16)&0xFF), (char) ((Pressurant >> 8)&0xFF), (char) (Pressurant & 0xFF)};
+            putcUART1(dataP[0]);
+            while (U1STAbits.TRMT);
+            putcUART1(dataP[1]);
+            while (U1STAbits.TRMT);
+            putcUART1(dataP[2]);
+            while (U1STAbits.TRMT);
         } else if (UART_Buffer[1] == 'F') //oxidixer
         {
             putcUART1('O');
-            TX_Register(Oxidizer << 8, 3);
+            while(U1STAbits.TRMT);
+            char dataO[3] = {(char) ((Oxidizer >> 16)&0xFF), (char) ((Oxidizer >> 8)&0xFF), (char) (Oxidizer & 0xFF)};
+            putcUART1(dataO[0]);
+            while (U1STAbits.TRMT);
+            putcUART1(dataO[1]);
+            while (U1STAbits.TRMT);
+            putcUART1(dataO[2]);
+            while (U1STAbits.TRMT);
         }
     } else if (UART_Buffer[0] == 'q') {
         if (UART_Buffer[1] == 's')
@@ -148,14 +164,27 @@ void ProcessUART(void) {
     } else if (UART_Buffer[0] == 'b') {
         if (UART_Buffer[1] == 'b') {
             backfill = 1;
-            backangle = -60;
+            OC3CONbits.OCM = 6;
+            backangle = -50;
+//            setAngle(backangle);
         } else if (UART_Buffer[1] == 'i') {
-            if (backfill)
-                backangle++;
-//            putcUART1('B');
-//            putcUART1(backangle);
+            OC3RS=0;
+            OC3CONbits.OCM=0;
         } else if (UART_Buffer[1] == 'e')
+        {
+            setAngle(-90);
             backfill = 0;
+            turnOffServo = 1;
+            TOSPC = 0;
+        } else if(UART_Buffer[1]=='f'){
+            backfill=1;
+            OC3CONbits.OCM=6;
+
+        } else if(UART_Buffer[1]=='s'){
+            backfill=0;
+            setAngle(-90);
+        }
+
     }
 
 }

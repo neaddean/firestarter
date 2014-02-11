@@ -9,6 +9,7 @@
 #define	AD7193_H
 
 
+//Register codes
 #define AD7193_COMM_REG      0
 #define AD7193_STATUS_REG    0
 #define AD7193_MODE_REG      1
@@ -19,6 +20,7 @@
 #define AD7193_OFFSET_REG    6
 #define AD7193_FULLSCALE_REG 7
 
+//Read/Write flags for the Communication Register
 #define AD7193_READ  1<<6
 #define AD7193_WRITE 0<<6
 
@@ -36,10 +38,10 @@
 #define MODE_EX_CLK_MCLK2       0b01l<<18
 #define MODE_INT_CLK1           0b10l<<18
 #define MODE_INT_CLK2           0b11l<<18
-#define MODE_NO_AVG             0b00l<<16
-#define MODE_AVG_2              0b01l<<16
-#define MODE_AVG_4              0b10l<<16
-#define MODE_AVG_8              0b11l<<16
+#define MODE_NO_AVG             0b000<<16
+#define MODE_AVG_2              0b010<<16
+#define MODE_AVG_4              0b100<<16
+#define MODE_AVG_8              0b110<<16
 #define MODE_SINC3              1l<<15
 #define MODE_SINC4              0l<<15
 #define MODE_ENPAR              1l<<13
@@ -48,13 +50,13 @@
 #define MODE_REJ60              1l<<10
 #define MODE_FILTER_RATE(x)     ((x&0b1111111111))
 #define MODE_FILTER_MASK        0x3FF
+
 //CONFIGURATION REGISTER OPTIONS
 #define CONFIG_CHOP             1l<<23
 #define CONFIG_REFSEL_1         0l<<20
 #define CONFIG_REFSEL_2         1l<<20
 #define CONFIG_PSUEDO           1l<<18
 #define CONFIG_CHANNEL_SEL(x)   ((1<<x)<<8)
-#define CONFIG_TEMP             0x010000
 #define CONFIG_BURN             1l<<7
 #define CONFIG_REFDET           1l<<6
 #define CONFIG_BUF              1l<<4
@@ -62,26 +64,18 @@
 #define CONFIG_GAIN_1           0b000
 #define CONFIG_GAIN_8           0b011
 #define CONFIG_GAIN_16          0b100
-#define CONFIG_GAIN_32          0b011
-#define CONFIG_GAIN_64          0b101
+#define CONFIG_GAIN_32          0b101
+#define CONFIG_GAIN_64          0b110
 #define CONFIG_GAIN_128         0b111
 
 #define CONFIG_GAIN_MASK        0b111
 #define CONFIG_CHANNEL_MASK     0b1111111111l<<8
 #define AD7193_REG_SELECT(x)    (x)<<3
 
-
+//AD7193 Communication Functions
 unsigned long AD7193_ReadReg(unsigned char registerNumber, unsigned char bytesNumber);
 void AD7193_WriteReg(unsigned char registerAddress, unsigned long registerValue, unsigned char bytesNumber);
+void AD7193_Init(void);
 void AD7193_Reset(void);
-void AD7193_SetChannel(unsigned char channel);
-unsigned char Ad7193_GetChannel(void);
-void AD7193_SetMode(unsigned char mode);
-unsigned char AD7193_SetGain(unsigned char gain);
-unsigned char AD7193_SetRate(unsigned int rate, unsigned char channel);
-unsigned long AD7193_GetMode(void);
-unsigned long AD7193_GetConfig(void);
-
-unsigned long AD7193_Init(void);
 #endif	/* AD7193_H */
 
