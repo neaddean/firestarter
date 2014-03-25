@@ -15,6 +15,11 @@ volatile long Oxidizer;
 volatile char fifo_data[4];
 volatile char senddata[4];
 
+volatile char armed = 0;
+volatile char fired = 0;
+
+volatile char close_file_flag = 0;
+
 volatile int T3POST = 0;
 
 volatile char record_data_flag = 0;
@@ -30,6 +35,8 @@ volatile char regulating = 0;
 volatile int backangle = -60;
 volatile char turnOffServo = 0;
 volatile int TOSPC = 0;
+
+volatile char servo_status;
 
 /************************************************
  * UART FUNCTIONS
@@ -56,7 +63,7 @@ void UARTinit(void) {
 
 void IOinit(void) {
     TRISA = 0x0003;
-    TRISB = 0x014A;
+    TRISB = 0x004A;
     LATA = 0x0000;
     LATB = 0x0000;
 }
@@ -218,8 +225,8 @@ void senseEmatch(int eMatch) {
             break;
     }
 
-    int count;
-    for (count = 0; count < 750; count++);
+    UINT count;
+    for (count = 0; count < 7500; count++);
 
     if (eMatch == 1) {
         if (PORTBbits.RB8 == 1)
@@ -232,9 +239,9 @@ void senseEmatch(int eMatch) {
         else
             putsUART1((UINT*) "2D\n");
     }
-
-    PORTAbits.RA2 = 0;
-    PORTAbits.RA3 = 0;
+    //
+    ////    LATAbits.LATA2 = 0;
+    ////    LATAbits.LATA3 = 0;
 }
 
 void startRecording() {
@@ -282,7 +289,7 @@ void __attribute__((interrupt, auto_psv)) _T1Interrupt(void) {
         Pressurant = result >> 8;
     if (regulating) {
         long adc_error = PSI_SETPOINT - (Oxidizer - 0x800000);
-        double PSI_error = adc_error * .00019857624192227687;
+        double PSI_error = adc_error * .000198616;
         long theta = PSI_error * 3;
         if (theta < 0) {
             theta = -30;
@@ -292,12 +299,12 @@ void __attribute__((interrupt, auto_psv)) _T1Interrupt(void) {
         setAngle(-57 + theta);
     } else if (backfill) {
         long adc_error = PSI_SETPOINT - (Oxidizer - 0x800000);
-        double PSI_error = adc_error * .00019857624192227687;
-        long theta = PSI_error * .5;
+        double PSI_error = adc_error * .000198616;
+        long theta = PSI_error * 1.5;
         if (theta < 0) {
             theta = -30;
-        } else if (theta > 15) {
-            theta = 15;
+        } else if (theta > 57) {
+            theta = 57;
         }
         setAngle(-57 + theta);
     } else {
@@ -313,6 +320,7 @@ void __attribute__((interrupt, no_auto_psv)) _T45Interrupt(void) {
     regulating = 0;
     OC3RS = 0;
     OC3CONbits.OCM = 0;
+    SERVO_OFF();
 }
 
 void pyroValve() {
@@ -329,7 +337,7 @@ void __attribute__((interrupt, no_auto_psv)) _T3Interrupt(void) {
     T3_Clear_Intr_Status_Bit;
     if (T3POST++ == 4) {
         CloseTimer3();
-        fireEmatch(2);
+        fireEmatch(1);
     }
 }
 
@@ -421,9 +429,23 @@ void PWMinit() {
     OC3R = HT7990_N90;
     OC3CONbits.OCTSEL = 0;
     OC3CONbits.OCM = 6;
-    RPOR7 = 0x0014;
+    RPOR7 = 0x1414;
 }
 
 void setAngle(long angle) {
     OC3RS = HT7990_0 + (int) (12.2 * angle); //Set to max 10 degree opening for fill;
+}
+
+void SERVO_ON() {
+    LATBbits.LATB8 = 1;
+    __delay32(900000);
+    LATBbits.LATB8 = 0;
+    servo_status = 1;
+}
+
+void SERVO_OFF(void) {
+    LATBbits.LATB13 = 1;
+    __delay32(900000);
+    LATBbits.LATB13 = 0;
+    servo_status = 0;
 }

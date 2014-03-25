@@ -8,7 +8,7 @@
 #ifndef PERIPHINIT_H
 #define	PERIPHINIT_H
 
-#define PSI_SETPOINT 0x47e005
+#define PSI_SETPOINT 0x440F91
 //#define DC_OFFSET 0x14E6D
 
 #define UxBRG_value 16
@@ -38,6 +38,9 @@ extern volatile int  backangle;
 extern volatile char turnOffServo;
 extern volatile int TOSPC;
 
+extern volatile char armed;
+extern volatile char fired;
+
 void UARTinit(void);
 void ProcessUART(void);
 void ClearUART(void);
@@ -65,8 +68,13 @@ void startRecording(void);
 void processData(void);
 void copyBuffer(char* src, char* dest, int bytes);
 
+void SERVO_ON(void);
+void SERVO_OFF(void);
+
 extern volatile long Pressurant;
 extern volatile long Oxidizer;
+
+extern volatile char servo_status;
 
 int fifo_read(void * buf, int nbytes);
 int fifo_write(const void * buf, int nbytes);

@@ -26,6 +26,7 @@ void ProcessUART(void) {
     if (UART_Buffer[0] == 'S') {
         if (UART_Buffer[1] == 'N') {
             putsUART1((UINT *) (UINT*) "FS-01\n");
+            AD7193_Reset();
         } else if (UART_Buffer[1] == 'T') {
             long temp = AD7193_ReadReg(AD7193_STATUS_REG, 1);
             putcUART1((char) (temp & 0xFF));
@@ -118,11 +119,20 @@ void ProcessUART(void) {
             senseEmatch(1);
         else if (UART_Buffer[1] == '2')
             senseEmatch(2);
+        if (UART_Buffer[1] == 'a') {
+            SERVO_ON();
+        } else if (UART_Buffer[1] == 'z') {
+            SERVO_OFF();
+        } else if (UART_Buffer[1] == 'p') {
+            putcUART1('S');
+            putcUART1(servo_status);
+            putcUART1('\n');
+        }
     } else if (UART_Buffer[0] == 'P') {
         if (UART_Buffer[1] == 'D') //pressurant
         {
             putcUART1('P');
-            while(U1STAbits.TRMT);
+            while (U1STAbits.TRMT);
             char dataP[3] = {(char) ((Pressurant >> 16)&0xFF), (char) ((Pressurant >> 8)&0xFF), (char) (Pressurant & 0xFF)};
             putcUART1(dataP[0]);
             while (U1STAbits.TRMT);
@@ -133,7 +143,7 @@ void ProcessUART(void) {
         } else if (UART_Buffer[1] == 'F') //oxidixer
         {
             putcUART1('O');
-            while(U1STAbits.TRMT);
+            while (U1STAbits.TRMT);
             char dataO[3] = {(char) ((Oxidizer >> 16)&0xFF), (char) ((Oxidizer >> 8)&0xFF), (char) (Oxidizer & 0xFF)};
             putcUART1(dataO[0]);
             while (U1STAbits.TRMT);
@@ -146,45 +156,49 @@ void ProcessUART(void) {
         if (UART_Buffer[1] == 's')
             startRecording();
         else if (UART_Buffer[1] == 'd') {
+            SERVO_ON();
+            fired = 1;
 #ifndef DEBUG
             startRecording();
 #endif
             regulating = 1;
             putsUART1((UINT*) "PA\n");
-            fireEmatch(1);
+            fireEmatch(2);
             pyroValve();
-        } else if (UART_Buffer[1] == 'r')
+        } else if (UART_Buffer[1] == 'f') {
+            if (PORTAbits.RA0) {
+                armed = 1;
+                putsUART1((UINT*) "ARMED\n");
+            } else
+                putsUART1((UINT*) "PROBLEM\n");
+        } else if (UART_Buffer[1] == 'w') {
+            armed = 0;
+            putsUART1((UINT*) "DISARMED\n");
+        } else if (UART_Buffer[1] == 'r') {
             record_data_flag = 1;
-        else if (UART_Buffer[1] == 't') {
+        } else if (UART_Buffer[1] == 't') {
             record_data_flag = 0;
             close_file_flag = 1;
-        } else if (UART_Buffer[1] == 'l') {
-            //             readCard();
+        } else if (UART_Buffer[1] == 'g') {
+            if (PORTAbits.RA0)
+                putsUART1((UINT*) "SENSE CONNECTED\n");
+            else
+                putsUART1((UINT*) "SENSE DISCONNECTED\n");
         }
     } else if (UART_Buffer[0] == 'b') {
         if (UART_Buffer[1] == 'b') {
+            SERVO_ON();
             backfill = 1;
             OC3CONbits.OCM = 6;
             backangle = -50;
-//            setAngle(backangle);
-        } else if (UART_Buffer[1] == 'i') {
-            OC3RS=0;
-            OC3CONbits.OCM=0;
-        } else if (UART_Buffer[1] == 'e')
-        {
+            //            setAngle(backangle);
+        } else if (UART_Buffer[1] == 'e') {
             setAngle(-90);
             backfill = 0;
             turnOffServo = 1;
             TOSPC = 0;
-        } else if(UART_Buffer[1]=='f'){
-            backfill=1;
-            OC3CONbits.OCM=6;
-
-        } else if(UART_Buffer[1]=='s'){
-            backfill=0;
-            setAngle(-90);
+            __delay32(16000000);
+            SERVO_OFF();
         }
-
-    }
-
+    } 
 }

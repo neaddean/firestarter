@@ -8,8 +8,11 @@
 #ifndef INCLUDES_H
 #define	INCLUDES_H
 
-#define DEBUG
+//#define DEBUG
 #define USE_AND_OR
+
+#define FCY 16000000UL
+
 #include <xc.h>
 #include <uart.h>
 #include <spi.h>

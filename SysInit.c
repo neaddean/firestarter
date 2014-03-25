@@ -6,6 +6,7 @@
  */
 
 #include "includes.h"
+
 void OSCinit(void){
      OSCCONbits.COSC = 0b001; //Enable FRC Phased Locked Loop to get necessary USB clk.
     OSCCONbits.NOSC = 0b001;
