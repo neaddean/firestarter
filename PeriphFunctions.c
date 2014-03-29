@@ -52,13 +52,14 @@ volatile char servo_status;
  *
  */
 void UARTinit(void) {
+    ClearUART();
     AD1PCFG = 0xFFFF;
     int config1 = UART_EN | UART_UEN_00 | UART_BRGH_SIXTEEN;
     int config2 = UART_TX_ENABLE;
     OpenUART1(config1, config2, UxBRG_value);
     RPINR18 = 1;
     RPOR0 = 0x0003;
-    ConfigIntUART1(UART_RX_INT_EN | UART_RX_INT_PR4);
+    ConfigIntUART1(UART_RX_INT_EN | UART_RX_INT_PR1);
 }
 
 void IOinit(void) {
@@ -208,7 +209,7 @@ void fireEmatch(int eMatch) {
     }
 
     unsigned int count;
-    for (count = 0; count < 50000; count++);
+    for (count = 0; count < 60000; count++);
 
     LATBbits.LATB13 = 0;
     LATBbits.LATB12 = 0;
@@ -266,7 +267,7 @@ void startRecording() {
     PR4 = 0xEA54;
     PR5 = 0x002A;
     IEC1bits.T5IE = 1;
-    IPC7bits.T5IP = 1;
+    IPC7bits.T5IP = 6;
 }
 
 void copyBuffer(char* src, char* dest, int bytes) {
@@ -281,12 +282,14 @@ void __attribute__((interrupt, auto_psv)) _T1Interrupt(void) {
     unsigned long result = AD7193_ReadReg(AD7193_DATA_REG, 4);
     char data2[4] = {(char) ((result & 0xFF000000) >> 24), (char) ((result & 0x00FF0000) >> 16), (char) ((result & 0x0000FF00) >> 8), (char) result & 0x000000FF};
     fifo_write(data2, 4);
-    if ((result & 0x03) == 0x03)
-        //        copyBuffer(data2, Pressurant, 3);
+    if ((result & 0x07) == 0x03)
+    {
         Oxidizer = result >> 8;
-    else if (result & 0x01 == 0x01)
-        //        copyBuffer(data2, Oxidizer, 3);
+    }
+    else if ((result & 0x07) == 0x02)
+    {
         Pressurant = result >> 8;
+    }
     if (regulating) {
         long adc_error = PSI_SETPOINT - (Oxidizer - 0x800000);
         double PSI_error = adc_error * .000198616;
@@ -328,14 +331,14 @@ void pyroValve() {
     PR3 = 0xFFFF;
     //    PR5 = 0x0004;
     IEC0bits.T3IE = 1;
-    IPC2bits.T3IP = 1;
+    IPC2bits.T3IP = 6;
     T3POST = 0;
     regulating = 1;
 }
 
 void __attribute__((interrupt, no_auto_psv)) _T3Interrupt(void) {
     T3_Clear_Intr_Status_Bit;
-    if (T3POST++ == 4) {
+    if (T3POST++ == 7) {
         CloseTimer3();
         fireEmatch(1);
     }

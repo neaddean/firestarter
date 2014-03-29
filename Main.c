@@ -41,8 +41,10 @@ int main() {
     //    OpenTimer1(T1_ON, 0x9C40); // for conversions
     OpenTimer1(T1_ON, 0x3E80);
     //    OpenTimer1(T1_ON, 0x29B0);
-    ConfigIntTimer1(T1_INT_ON | T1_INT_PRIOR_3);
+    ConfigIntTimer1(T1_INT_ON | T1_INT_PRIOR_7);
     //    putsUART1((UINT*)"Started...\n");
+    UART_Buff_Size=10;
+    ClearUART();
     while (1) {
         if (UART_Process_Flag) {
             ProcessUART();
@@ -52,27 +54,6 @@ int main() {
         if (close_file_flag) {
             closeFiles();
             close_file_flag = 0;
-        }
-        //        if (armed) {
-        //            if (!PORTAbits.RA0) {
-        //                startRecording();
-        //                SERVO_ON();
-        //                armed = 0;
-        //                fired = 1;
-        //                regulating = 1;
-        //                putsUART1((UINT*) "PA\n");
-        //                fireEmatch(2);
-        //                pyroValve();
-        //            }
-        //        }
-        if (!fired) {
-            if (!PORTAbits.RA0) {
-                SERVO_ON();
-                regulating = 1;
-                startRecording();
-                fired = 1;
-                fireEmatch(1);
-            }
         }
     }
     return 0;

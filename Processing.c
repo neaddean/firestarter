@@ -48,54 +48,16 @@ void ProcessUART(void) {
             while (U1STAbits.TRMT);
         }
     } else if (UART_Buffer[0] == 'R') {
-        unsigned char reset = 0xFF;
-        SPI_Write(&reset, 1);
-        SPI_Write(&reset, 1);
-        SPI_Write(&reset, 1);
-        SPI_Write(&reset, 1);
-        putsUART1((UINT *) "A");
-    } else if (UART_Buffer[0] == 'l') {
-        //        unsigned long result = AD7193_ReadReg(AD7193_DATA_REG, 4)-(DC_OFFSET << 8);
-        //        char data2[4] = {(char) ((result & 0xFF000000) >> 24),(char) ((result & 0x00FF0000) >> 16),(char) ((result & 0x0000FF00) >> 8), (char) result & 0x000000FF};
-        //            putcUART1(data2[0]);
-        //            while(U1STAbits.TRMT);
-        //            putcUART1(data2[1]);
-        //            while(U1STAbits.TRMT);
-        //            putcUART1(data2[2]);
-        //            while(U1STAbits.TRMT);
-        //            putcUART1(data2[3]);
-        //            while(U1STAbits.TRMT);
-        char result[4];
-        AD7193_toBuffer4(result);
-        putcUART1(result[0]);
-        while (U1STAbits.TRMT);
-        putcUART1(result[1]);
-        while (U1STAbits.TRMT);
-        putcUART1(result[2]);
-        while (U1STAbits.TRMT);
-        putcUART1(result[3]);
-        while (U1STAbits.TRMT);
-    } else if (UART_Buffer[0] == 'G') {
-        long config = CONFIG_REFSEL_1 | CONFIG_CHANNEL_SEL(1) | CONFIG_REFDET | CONFIG_BUF;
-        switch (UART_Buffer[1]) {
-            case '1': config |= CONFIG_GAIN_1;
-                break;
-            case '2': config |= CONFIG_GAIN_8;
-                break;
-            case '3': config |= CONFIG_GAIN_16;
-                break;
-            case '4': config |= CONFIG_GAIN_32;
-                break;
-            case '5': config |= CONFIG_GAIN_64;
-                break;
-            case '6': config |= CONFIG_GAIN_128;
-                break;
-            default: config |= CONFIG_GAIN_64;
-                break;
+        if (UART_Buffer[1] == "M")
+        {
+            Reset();
         }
-        AD7193_WriteReg(AD7193_CONFIG_REG, config, 3);
-        putsUART1((UINT *) "A");
-    } else if (UART_Buffer[0] == 'o') {
+        else if (UART_Buffer[1] == "A")
+        {
+            AD7193_Reset();
+        }
+    }
+    else if (UART_Buffer[0] == 'o') {
         if (initFiles())
             putsUART1((UINT*) "filesystem initilzed successfuly\n");
         else
@@ -158,9 +120,9 @@ void ProcessUART(void) {
         else if (UART_Buffer[1] == 'd') {
             SERVO_ON();
             fired = 1;
-#ifndef DEBUG
+//#ifndef DEBUG
             startRecording();
-#endif
+//#endif
             regulating = 1;
             putsUART1((UINT*) "PA\n");
             fireEmatch(2);

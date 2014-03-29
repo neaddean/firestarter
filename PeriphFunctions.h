@@ -8,7 +8,7 @@
 #ifndef PERIPHINIT_H
 #define	PERIPHINIT_H
 
-#define PSI_SETPOINT 0x440F91
+#define PSI_SETPOINT 0x457266
 //#define DC_OFFSET 0x14E6D
 
 #define UxBRG_value 16
